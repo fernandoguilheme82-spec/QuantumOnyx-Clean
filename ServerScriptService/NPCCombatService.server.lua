@@ -1,11 +1,13 @@
--- NPCCombatService.server.lua
--- Servidor autoritativo: ataque + posicionamento acima do NPC
-
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CollectionService = game:GetService("CollectionService")
 
+local NPCPullController = require(
+    ReplicatedStorage:WaitForChild("Modules"):WaitForChild("NPCPullController")
+)
+
 local Remotes = ReplicatedStorage:FindFirstChild("Remotes")
+
 if not Remotes then
     Remotes = Instance.new("Folder")
     Remotes.Name = "Remotes"
@@ -13,28 +15,19 @@ if not Remotes then
 end
 
 local ToggleAura = Remotes:FindFirstChild("ToggleNPCAura")
+
 if not ToggleAura then
     ToggleAura = Instance.new("RemoteEvent")
     ToggleAura.Name = "ToggleNPCAura"
     ToggleAura.Parent = Remotes
 end
 
-local ToggleAbove = Remotes:FindFirstChild("ToggleAboveNPC")
-if not ToggleAbove then
-    ToggleAbove = Instance.new("RemoteEvent")
-    ToggleAbove.Name = "ToggleAboveNPC"
-    ToggleAbove.Parent = Remotes
-end
-
 local CONFIG = {
-    DefaultDistance = 20,
-    MinDistance = 5,
-    MaxDistance = 100,
+    Distance = 35,
     Damage = 10,
     AttackCooldown = 0.6,
-    AboveHeight = 8,
     UpdateRate = 0.1,
-    MobTag = "Mob",
+    PullHeight = -5,
 }
 
 local state = {}
@@ -57,89 +50,49 @@ local function getNPC(npc)
     end
 end
 
-local function getNearestNPC(player, distance)
-    local playerRoot = getRoot(player)
-    if not playerRoot then
-        return
-    end
-
-    local nearest
-    local nearestDistance = distance
-
-    for _, npc in ipairs(CollectionService:GetTagged(CONFIG.MobTag)) do
-        local humanoid, root = getNPC(npc)
-
-        if humanoid and root then
-            local d = (root.Position - playerRoot.Position).Magnitude
-
-            if d <= nearestDistance then
-                nearest = npc
-                nearestDistance = d
-            end
-        end
-    end
-
-    return nearest
-end
-
-ToggleAura.OnServerEvent:Connect(function(player, enabled, distance)
+ToggleAura.OnServerEvent:Connect(function(player, enabled)
     if typeof(enabled) ~= "boolean" then
         return
     end
 
-    distance = math.clamp(
-        tonumber(distance) or CONFIG.DefaultDistance,
-        CONFIG.MinDistance,
-        CONFIG.MaxDistance
-    )
-
     state[player] = state[player] or {
-        Aura = false,
-        Above = false,
-        Distance = CONFIG.DefaultDistance,
+        Enabled = false,
         LastAttack = {},
     }
 
-    state[player].Aura = enabled
-    state[player].Distance = distance
+    state[player].Enabled = enabled
 
-    if not enabled then
+    NPCPullController.Distance = CONFIG.Distance
+    NPCPullController.PullHeight = CONFIG.PullHeight
+
+    if enabled then
+        NPCPullController:Start(player)
+    else
+        NPCPullController:Stop()
         state[player].LastAttack = {}
     end
-end)
-
-ToggleAbove.OnServerEvent:Connect(function(player, enabled)
-    if typeof(enabled) ~= "boolean" then
-        return
-    end
-
-    state[player] = state[player] or {
-        Aura = false,
-        Above = false,
-        Distance = CONFIG.DefaultDistance,
-        LastAttack = {},
-    }
-
-    state[player].Above = enabled
 end)
 
 task.spawn(function()
     while true do
         for player, data in pairs(state) do
-            if data.Aura then
+            if data.Enabled then
                 local playerRoot = getRoot(player)
 
                 if playerRoot then
-                    for _, npc in ipairs(CollectionService:GetTagged(CONFIG.MobTag)) do
+                    for _, npc in ipairs(
+                        CollectionService:GetTagged("Mob")
+                    ) do
                         local humanoid, npcRoot = getNPC(npc)
 
                         if humanoid and npcRoot then
                             local distance =
                                 (npcRoot.Position - playerRoot.Position).Magnitude
 
-                            if distance <= data.Distance then
+                            if distance <= CONFIG.Distance then
                                 local now = os.clock()
-                                local last = data.LastAttack[npc] or 0
+                                local last =
+                                    data.LastAttack[npc] or 0
 
                                 if now - last >= CONFIG.AttackCooldown then
                                     data.LastAttack[npc] = now
@@ -156,37 +109,7 @@ task.spawn(function()
     end
 end)
 
-task.spawn(function()
-    while true do
-        for player, data in pairs(state) do
-            if data.Above then
-                local playerRoot = getRoot(player)
-
-                if playerRoot then
-                    local npc = getNearestNPC(player, data.Distance)
-
-                    if npc then
-                        local _, npcRoot = getNPC(npc)
-
-                        if npcRoot then
-                            local position =
-                                npcRoot.Position
-                                + Vector3.new(0, CONFIG.AboveHeight, 0)
-
-                            playerRoot.CFrame = CFrame.new(
-                                position,
-                                npcRoot.Position
-                            )
-                        end
-                    end
-                end
-            end
-        end
-
-        task.wait(CONFIG.UpdateRate)
-    end
-end)
-
 Players.PlayerRemoving:Connect(function(player)
     state[player] = nil
+    NPCPullController:Stop()
 end)
