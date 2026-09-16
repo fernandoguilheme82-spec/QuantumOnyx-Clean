@@ -1,53 +1,33 @@
 --[[
-                    DESGRAÇA ECLIPSE
-              By Bombix Dominante / Nox
-                    Apoio: Blox Brasil
-                  Direitos autorais: Lucas
-]]
+                      DESGRAÇA ECLIPSE
+                By Bombix Dominante / Nox
+                      Apoio: Blox Brasil
+                    Direitos autorais: Lucas
+]]--
 
-local BASE =
-    "https://raw.githubusercontent.com/fernandoguilheme82-spec/QuantumOnyx-Clean/main/"
+local BASE = "https://raw.githubusercontent.com/fernandoguilheme82-spec/QuantumOnyx-Clean/main/Modules/"
 
-local Rayfield = loadstring(
-    game:HttpGet("https://sirius.menu/gen2")
-)()
+local Modules = {
+    "ObjectFinder.lua",
+    "ObjectFilter.lua",
+    "ObjectESP.lua",
+    "ObjectBring.lua",
+    "PlaceDetector.lua",
+}
 
-local Window = Rayfield:CreateWindow({
-    name = "Desgraça Eclipse",
-    subtitle = "Desgraça Eclipse",
-    sidebarLayout = true,
-})
+for _, FileName in ipairs(Modules) do
+    task.spawn(function()
+        local URL = BASE .. FileName
 
-local function LoadModule(file)
-    local ok, result = pcall(function()
-        return loadstring(
-            game:HttpGet(BASE .. file)
-        )()
+        local Success, Result = pcall(function()
+            return loadstring(game:HttpGet(URL))()
+        end)
+
+        if Success then
+            print("[Desgraça Eclipse] ✓ " .. FileName)
+        else
+            warn("[Desgraça Eclipse] ✗ " .. FileName)
+            warn(Result)
+        end
     end)
-
-    if not ok then
-        warn("[Desgraça Eclipse] Falha: " .. file)
-        warn(result)
-        return nil
-    end
-
-    return result
 end
-
-local MobController = LoadModule(
-    "Modules/MobController.lua"
-)
-
-if MobController and MobController.Init then
-    MobController:Init(Window)
-end
-
-local ObjectFinder = LoadModule(
-    "Modules/ObjectFinder.lua"
-)
-
-if ObjectFinder and ObjectFinder.Init then
-    ObjectFinder:Init(Window)
-end
-
-print("[Desgraça Eclipse] Todos os módulos carregados.")
