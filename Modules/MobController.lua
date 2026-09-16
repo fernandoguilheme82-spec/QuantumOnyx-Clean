@@ -1,4 +1,5 @@
 local Players = game:GetService("Players")
+
 local Player = Players.LocalPlayer
 
 local MobController = {
@@ -14,20 +15,31 @@ local function getRoot()
 end
 
 local function isNPC(model)
-    if not model:IsA("Model") or model == Player.Character then
+    if not model:IsA("Model") then
+        return false
+    end
+
+    if model == Player.Character then
         return false
     end
 
     local humanoid = model:FindFirstChildOfClass("Humanoid")
     local root = model:FindFirstChild("HumanoidRootPart")
 
-    return humanoid ~= nil
-        and root ~= nil
-        and humanoid.Health > 0
+    if not humanoid or not root then
+        return false
+    end
+
+    if humanoid.Health <= 0 then
+        return false
+    end
+
+    return not root.Anchored
 end
 
 function MobController:GetNearbyMobs()
     local playerRoot = getRoot()
+
     if not playerRoot then
         return {}
     end
@@ -36,9 +48,9 @@ function MobController:GetNearbyMobs()
 
     for _, obj in ipairs(workspace:GetDescendants()) do
         if isNPC(obj) then
-            local root = obj.HumanoidRootPart
+            local root = obj:FindFirstChild("HumanoidRootPart")
 
-            if not root.Anchored then
+            if root then
                 local distance = (root.Position - playerRoot.Position).Magnitude
 
                 if distance <= self.Radius then
@@ -59,15 +71,14 @@ function MobController:PullMob(mob)
     local playerRoot = getRoot()
     local mobRoot = mob:FindFirstChild("HumanoidRootPart")
 
-    if not playerRoot or not mobRoot or mobRoot.Anchored then
+    if not playerRoot or not mobRoot then
         return
     end
 
     local offset = mobRoot.Position - playerRoot.Position
+    local distance = offset.Magnitude
 
-    if offset.Magnitude > self.PullDistance
-        and offset.Magnitude <= self.Radius then
-
+    if distance <= self.Radius and distance > self.PullDistance then
         mobRoot.CFrame = CFrame.new(
             playerRoot.Position + offset.Unit * self.PullDistance
         )
@@ -96,14 +107,22 @@ function MobController:Stop()
     self.Enabled = false
 end
 
-function MobController:Toggle()
-    if self.Enabled then
-        self:Stop()
-    else
-        self:Start()
-    end
+function MobController:Init(Window)
+    local Tab = Window:CreateTab({
+        name = "Mob Controller"
+    })
 
-    return self.Enabled
+    Tab:CreateToggle({
+        name = "Mob Controller",
+        default = false,
+        callback = function(Value)
+            if Value then
+                self:Start()
+            else
+                self:Stop()
+            end
+        end
+    })
 end
 
 return MobController
