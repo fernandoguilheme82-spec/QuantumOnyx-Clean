@@ -1,15 +1,16 @@
 local ObjectBring = {}
 
-function ObjectBring.SetTarget(object)
-    ObjectBring.Target = object
-end
+function ObjectBring:Init(Window)
+    local Tab = Window:CreateTab({
+        name = "Object Bring",
+    })
 
-function ObjectBring.GetTarget()
-    return ObjectBring.Target
-end
+    Tab:CreateParagraph({
+        title = "Object Bring",
+        content = "Sistema de objetos carregado.",
+    })
 
-function ObjectBring.Clear()
-    ObjectBring.Target = nil
+    print("[Desgraça Eclipse] ObjectBring iniciado")
 end
 
 return ObjectBring

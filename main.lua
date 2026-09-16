@@ -7,19 +7,15 @@
 
 local BASE = "https://raw.githubusercontent.com/fernandoguilheme82-spec/QuantumOnyx-Clean/main/"
 
--- Rayfield
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
 
--- Janela principal
 local Window = Rayfield:CreateWindow({
     name = "Desgraça Eclipse",
     subtitle = "Desgraça Eclipse",
     sidebarLayout = true,
 })
 
--- Todos os módulos registrados aqui
 local Modules = {
-    "Modules/AimNPC.lua",
     "Modules/ObjectFinder.lua",
     "Modules/ObjectFilter.lua",
     "Modules/ObjectESP.lua",
@@ -27,14 +23,12 @@ local Modules = {
     "Modules/MobController.lua",
 }
 
--- Carregar módulos
 for _, File in ipairs(Modules) do
     local Success, Module = pcall(function()
-        local Source = game:HttpGet(BASE .. File)
-        return loadstring(Source)()
+        return loadstring(game:HttpGet(BASE .. File))()
     end)
 
-    if Success and Module then
+    if Success and type(Module) == "table" then
         if type(Module.Init) == "function" then
             local InitSuccess, InitError = pcall(function()
                 Module:Init(Window)
@@ -43,16 +37,12 @@ for _, File in ipairs(Modules) do
             if InitSuccess then
                 print("[Desgraça Eclipse] OK: " .. File)
             else
-                warn("[Desgraça Eclipse] ERRO INIT: " .. File)
+                warn("[Desgraça Eclipse] INIT ERROR: " .. File)
                 warn(InitError)
             end
-        else
-            print("[Desgraça Eclipse] OK: " .. File)
         end
     else
-        warn("[Desgraça Eclipse] FALHA: " .. File)
+        warn("[Desgraça Eclipse] LOAD ERROR: " .. File)
         warn(Module)
     end
 end
-
-print("[Desgraça Eclipse] Todos os módulos foram processados.")

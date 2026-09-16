@@ -1,21 +1,16 @@
 local ObjectFilter = {}
 
-function ObjectFilter.Filter(objects, text)
-    text = tostring(text or ""):lower()
+function ObjectFilter:Init(Window)
+    local Tab = Window:CreateTab({
+        name = "Object Filter",
+    })
 
-    if text == "" then
-        return objects
-    end
+    Tab:CreateParagraph({
+        title = "Object Filter",
+        content = "Filtro de objetos carregado.",
+    })
 
-    local result = {}
-
-    for _, objectData in ipairs(objects) do
-        if objectData.Name:lower():find(text, 1, true) then
-            table.insert(result, objectData)
-        end
-    end
-
-    return result
+    print("[Desgraça Eclipse] ObjectFilter iniciado")
 end
 
 return ObjectFilter
