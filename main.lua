@@ -5,36 +5,46 @@
                     Direitos autorais: Lucas
 ]]--
 
-local BASE = "https://raw.githubusercontent.com/fernandoguilheme82-spec/QuantumOnyx-Clean/main/Modules/"
+local BASE = "https://raw.githubusercontent.com/fernandoguilheme82-spec/QuantumOnyx-Clean/main/"
 
+-- Rayfield
+local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
+
+-- Janela principal
+local Window = Rayfield:CreateWindow({
+    name = "Desgraça Eclipse",
+    subtitle = "Desgraça Eclipse",
+    sidebarLayout = true,
+})
+
+-- Módulos
 local Modules = {
-    "ObjectFinder.lua",
-    "ObjectFilter.lua",
-    "ObjectESP.lua",
-    "ObjectBring.lua",
-    "PlaceDetector.lua",
+    "Modules/AimNPC.lua",
 }
 
-for _, FileName in ipairs(Modules) do
-    task.spawn(function()
-        local URL = BASE .. FileName
-
-        local Success, Result = pcall(function()
-            return loadstring(game:HttpGet(URL))()
-        end)
-
-        if Success then
-            print("[Desgraça Eclipse] ✓ " .. FileName)
-        else
-            warn("[Desgraça Eclipse] ✗ " .. FileName)
-            warn(Result)
-        end
+-- Carregador
+for _, File in ipairs(Modules) do
+    local Success, Module = pcall(function()
+        return loadstring(game:HttpGet(BASE .. File))()
     end)
+
+    if Success and Module then
+        if Module.Init then
+            local InitSuccess, InitError = pcall(function()
+                Module:Init(Window)
+            end)
+
+            if InitSuccess then
+                print("[Desgraça Eclipse] Módulo carregado: " .. File)
+            else
+                warn("[Desgraça Eclipse] Erro ao iniciar " .. File)
+                warn(InitError)
+            end
+        else
+            print("[Desgraça Eclipse] Módulo carregado: " .. File)
+        end
+    else
+        warn("[Desgraça Eclipse] Falha ao carregar: " .. File)
+        warn(Module)
+    end
 end
-
--- Aim NPC: módulo independente
-local AimNPC = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/fernandoguilheme82-spec/QuantumOnyx-Clean/main/Modules/AimNPC.lua"
-))()
-
-AimNPC.Init(Window)
