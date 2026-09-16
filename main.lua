@@ -5,11 +5,21 @@
                   Direitos autorais: Lucas
 ]]--
 
-local DesgracaEclipse = {
-    Name = "Desgraça Eclipse",
-    Version = "1.0.0"
-}
+local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
 
-print("[Desgraça Eclipse] Inicializando...")
+local Window = Rayfield:CreateWindow({
+    name = "Desgraça Eclipse",
+    subtitle = "Desgraça Eclipse",
+    sidebarLayout = true,
+})
 
-return DesgracaEclipse
+local Tab = Window:CreateTab({
+    name = "Principal",
+})
+
+Tab:CreateButton({
+    name = "Teste",
+    callback = function()
+        print("[Desgraça Eclipse] Rayfield funcionando!")
+    end,
+})
