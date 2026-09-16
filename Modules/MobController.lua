@@ -1,4 +1,5 @@
 local Players = game:GetService("Players")
+local CollectionService = game:GetService("CollectionService")
 
 local Player = Players.LocalPlayer
 
@@ -6,7 +7,8 @@ local MobController = {
     Enabled = false,
     Radius = 80,
     PullDistance = 12,
-    UpdateRate = 0.15
+    UpdateRate = 0.25,
+    MobTag = "Mob"
 }
 
 local function getRoot()
@@ -14,27 +16,27 @@ local function getRoot()
     return character and character:FindFirstChild("HumanoidRootPart")
 end
 
-local function isNPC(model)
-    if not model:IsA("Model") then
+local function isValidMob(mob)
+    if not mob:IsA("Model") then
         return false
     end
 
-    if model == Player.Character then
+    if mob == Player.Character then
         return false
     end
 
-    local humanoid = model:FindFirstChildOfClass("Humanoid")
-    local root = model:FindFirstChild("HumanoidRootPart")
+    local humanoid = mob:FindFirstChildOfClass("Humanoid")
+    local root = mob:FindFirstChild("HumanoidRootPart")
 
     if not humanoid or not root then
         return false
     end
 
-    if humanoid.Health <= 0 then
+    if humanoid.Health <= 0 or root.Anchored then
         return false
     end
 
-    return not root.Anchored
+    return true
 end
 
 function MobController:GetNearbyMobs()
@@ -46,15 +48,15 @@ function MobController:GetNearbyMobs()
 
     local mobs = {}
 
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if isNPC(obj) then
-            local root = obj:FindFirstChild("HumanoidRootPart")
+    for _, mob in ipairs(CollectionService:GetTagged(self.MobTag)) do
+        if isValidMob(mob) then
+            local root = mob:FindFirstChild("HumanoidRootPart")
 
             if root then
                 local distance = (root.Position - playerRoot.Position).Magnitude
 
                 if distance <= self.Radius then
-                    table.insert(mobs, obj)
+                    table.insert(mobs, mob)
                 end
             end
         end
@@ -63,8 +65,8 @@ function MobController:GetNearbyMobs()
     return mobs
 end
 
-function MobController:PullMob(mob)
-    if not isNPC(mob) then
+function MobController:BringMob(mob)
+    if not isValidMob(mob) then
         return
     end
 
@@ -78,11 +80,17 @@ function MobController:PullMob(mob)
     local offset = mobRoot.Position - playerRoot.Position
     local distance = offset.Magnitude
 
-    if distance <= self.Radius and distance > self.PullDistance then
-        mobRoot.CFrame = CFrame.new(
+    if distance > self.Radius or distance <= self.PullDistance then
+        return
+    end
+
+    -- Move apenas uma vez por ciclo.
+    -- Não mantém o NPC sendo reposicionado continuamente.
+    mob:PivotTo(
+        CFrame.new(
             playerRoot.Position + offset.Unit * self.PullDistance
         )
-    end
+    )
 end
 
 function MobController:Start()
@@ -94,8 +102,10 @@ function MobController:Start()
 
     task.spawn(function()
         while self.Enabled do
-            for _, mob in ipairs(self:GetNearbyMobs()) do
-                self:PullMob(mob)
+            local mobs = self:GetNearbyMobs()
+
+            for _, mob in ipairs(mobs) do
+                self:BringMob(mob)
             end
 
             task.wait(self.UpdateRate)
