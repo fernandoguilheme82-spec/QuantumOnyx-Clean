@@ -3,12 +3,14 @@ local CollectionService = game:GetService("CollectionService")
 
 local Player = Players.LocalPlayer
 
-local MobController = {
+local NPCAttackTest = {
     Enabled = false,
-    Radius = 80,
-    Height = 8,
+    Distance = 20,
     UpdateRate = 0.25,
-    MobTag = "Mob"
+    MobTag = "Mob",
+
+    -- Defina esta função no seu sistema de combate.
+    AttackFunction = nil
 }
 
 local function getRoot()
@@ -27,10 +29,13 @@ local function isValidMob(mob)
     return humanoid
         and root
         and humanoid.Health > 0
-        and not root.Anchored
 end
 
-function MobController:GetNearbyMobs()
+function NPCAttackTest:SetDistance(value)
+    self.Distance = math.clamp(tonumber(value) or 20, 5, 100)
+end
+
+function NPCAttackTest:GetNearbyMobs()
     local playerRoot = getRoot()
     if not playerRoot then
         return {}
@@ -42,7 +47,7 @@ function MobController:GetNearbyMobs()
         if isValidMob(mob) then
             local root = mob:FindFirstChild("HumanoidRootPart")
 
-            if (root.Position - playerRoot.Position).Magnitude <= self.Radius then
+            if root and (root.Position - playerRoot.Position).Magnitude <= self.Distance then
                 table.insert(result, mob)
             end
         end
@@ -51,24 +56,15 @@ function MobController:GetNearbyMobs()
     return result
 end
 
-function MobController:PositionAbove(mob)
-    if not isValidMob(mob) then
+function NPCAttackTest:Attack(mob)
+    if not self.AttackFunction then
         return
     end
 
-    local playerRoot = getRoot()
-    local mobRoot = mob:FindFirstChild("HumanoidRootPart")
-
-    if not playerRoot or not mobRoot then
-        return
-    end
-
-    playerRoot.CFrame = CFrame.new(
-        mobRoot.Position + Vector3.new(0, self.Height, 0)
-    )
+    self.AttackFunction(mob)
 end
 
-function MobController:Start()
+function NPCAttackTest:Start()
     if self.Enabled then
         return
     end
@@ -77,10 +73,8 @@ function MobController:Start()
 
     task.spawn(function()
         while self.Enabled do
-            local mobs = self:GetNearbyMobs()
-
-            if mobs[1] then
-                self:PositionAbove(mobs[1])
+            for _, mob in ipairs(self:GetNearbyMobs()) do
+                self:Attack(mob)
             end
 
             task.wait(self.UpdateRate)
@@ -88,17 +82,17 @@ function MobController:Start()
     end)
 end
 
-function MobController:Stop()
+function NPCAttackTest:Stop()
     self.Enabled = false
 end
 
-function MobController:Init(Window)
+function NPCAttackTest:Init(Window)
     local Tab = Window:CreateTab({
-        name = "Mob Controller"
+        name = "NPC Attack"
     })
 
     Tab:CreateToggle({
-        name = "Ficar acima do Mob",
+        name = "NPC Attack Test",
         default = false,
         callback = function(value)
             if value then
@@ -108,6 +102,17 @@ function MobController:Init(Window)
             end
         end
     })
+
+    Tab:CreateSlider({
+        name = "Distância",
+        range = {5, 100},
+        increment = 5,
+        suffix = " studs",
+        currentValue = self.Distance,
+        callback = function(value)
+            self:SetDistance(value)
+        end
+    })
 end
 
-return MobController
+return NPCAttackTest
