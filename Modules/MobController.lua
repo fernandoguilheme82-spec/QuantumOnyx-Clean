@@ -6,9 +6,9 @@ local Player = Players.LocalPlayer
 local MobController = {
     Enabled = false,
     Radius = 80,
-    Height = 8,
-    UpdateRate = 0.25,
-    MobTag = "Mob"
+    PullDistance = 6,
+    UpdateRate = 0.15,
+    MobTag = "Mob",
 }
 
 local function getRoot()
@@ -16,18 +16,19 @@ local function getRoot()
     return character and character:FindFirstChild("HumanoidRootPart")
 end
 
-local function isValidMob(mob)
-    if not mob:IsA("Model") or mob == Player.Character then
-        return false
+local function getMobRoot(mob)
+    if not mob or not mob:IsA("Model") then
+        return nil
     end
 
     local humanoid = mob:FindFirstChildOfClass("Humanoid")
     local root = mob:FindFirstChild("HumanoidRootPart")
 
-    return humanoid
-        and root
-        and humanoid.Health > 0
-        and not root.Anchored
+    if not humanoid or not root or humanoid.Health <= 0 then
+        return nil
+    end
+
+    return root
 end
 
 function MobController:GetNearbyMobs()
@@ -39,10 +40,13 @@ function MobController:GetNearbyMobs()
     local result = {}
 
     for _, mob in ipairs(CollectionService:GetTagged(self.MobTag)) do
-        if isValidMob(mob) then
-            local root = mob:FindFirstChild("HumanoidRootPart")
+        local root = getMobRoot(mob)
 
-            if (root.Position - playerRoot.Position).Magnitude <= self.Radius then
+        if root then
+            local distance =
+                (root.Position - playerRoot.Position).Magnitude
+
+            if distance <= self.Radius then
                 table.insert(result, mob)
             end
         end
@@ -51,21 +55,38 @@ function MobController:GetNearbyMobs()
     return result
 end
 
-function MobController:PositionAbove(mob)
-    if not isValidMob(mob) then
-        return
-    end
-
+function MobController:BringMob(mob)
     local playerRoot = getRoot()
-    local mobRoot = mob:FindFirstChild("HumanoidRootPart")
+    local mobRoot = getMobRoot(mob)
 
     if not playerRoot or not mobRoot then
         return
     end
 
-    playerRoot.CFrame = CFrame.new(
-        mobRoot.Position + Vector3.new(0, self.Height, 0)
-    )
+    local target =
+        playerRoot.Position
+        + Vector3.new(0, -self.PullDistance, 0)
+
+    -- Move o modelo inteiro de uma vez.
+    mob:PivotTo(CFrame.new(target))
+
+    -- Evita que a física imediatamente empurre o NPC para longe.
+    for _, part in ipairs(mob:GetDescendants()) do
+        if part:IsA("BasePart") then
+            part.AssemblyLinearVelocity = Vector3.zero
+            part.AssemblyAngularVelocity = Vector3.zero
+        end
+    end
+end
+
+function MobController:Update()
+    if not self.Enabled then
+        return
+    end
+
+    for _, mob in ipairs(self:GetNearbyMobs()) do
+        self:BringMob(mob)
+    end
 end
 
 function MobController:Start()
@@ -77,12 +98,7 @@ function MobController:Start()
 
     task.spawn(function()
         while self.Enabled do
-            local mobs = self:GetNearbyMobs()
-
-            if mobs[1] then
-                self:PositionAbove(mobs[1])
-            end
-
+            self:Update()
             task.wait(self.UpdateRate)
         end
     end)
@@ -94,19 +110,44 @@ end
 
 function MobController:Init(Window)
     local Tab = Window:CreateTab({
-        name = "Mob Controller"
+        name = "Mob Controller",
     })
 
     Tab:CreateToggle({
-        name = "Ficar acima do Mob",
+        name = "Bring Mobs",
         default = false,
-        callback = function(value)
-            if value then
+
+        callback = function(enabled)
+            if enabled then
                 self:Start()
             else
                 self:Stop()
             end
-        end
+        end,
+    })
+
+    Tab:CreateSlider({
+        name = "Distância",
+        range = {20, 300},
+        increment = 5,
+        suffix = " studs",
+        currentValue = self.Radius,
+
+        callback = function(value)
+            self.Radius = value
+        end,
+    })
+
+    Tab:CreateSlider({
+        name = "Altura abaixo do jogador",
+        range = {1, 20},
+        increment = 1,
+        suffix = " studs",
+        currentValue = self.PullDistance,
+
+        callback = function(value)
+            self.PullDistance = value
+        end,
     })
 end
 

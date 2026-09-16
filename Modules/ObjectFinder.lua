@@ -1,79 +1,130 @@
+local Players = game:GetService("Players")
+
+local Player = Players.LocalPlayer
+
 local ObjectFinder = {
-    Root = workspace,
-    MaxSuggestions = 12,
+    Enabled = false,
+    Radius = 1000,
+    MaxSuggestions = 15,
     Index = {},
-    Ready = false,
+    Highlights = {},
 }
 
-local function normalize(text)
-    return string.lower(tostring(text or ""))
+local function normalize(value)
+    return string.lower(tostring(value or ""))
 end
 
-function ObjectFinder:BuildIndex(root)
-    self.Root = root or workspace
+local function getRoot()
+    local character = Player.Character
+    return character and character:FindFirstChild("HumanoidRootPart")
+end
+
+function ObjectFinder:Refresh()
     self.Index = {}
 
-    table.insert(self.Index, self.Root)
+    for _, object in ipairs(workspace:GetDescendants()) do
+        if object:IsA("Model") or object:IsA("BasePart") then
+            table.insert(self.Index, object)
+        end
+    end
+end
 
-    for _, object in ipairs(self.Root:GetDescendants()) do
-        table.insert(self.Index, object)
+function ObjectFinder:ClearHighlights()
+    for object, highlight in pairs(self.Highlights) do
+        if highlight then
+            highlight:Destroy()
+        end
+
+        self.Highlights[object] = nil
+    end
+end
+
+function ObjectFinder:AddHighlight(object)
+    if self.Highlights[object] then
+        return
     end
 
-    self.Ready = true
+    local model = object
 
-    print(
-        "[Desgraça Eclipse] ObjectFinder:",
-        #self.Index,
-        "objetos indexados"
-    )
+    if not object:IsA("Model") then
+        model = object:FindFirstAncestorOfClass("Model")
+    end
+
+    if not model then
+        return
+    end
+
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "ObjectFinderHighlight"
+    highlight.Adornee = model
+    highlight.FillColor = Color3.fromRGB(0, 255, 80)
+    highlight.OutlineColor = Color3.fromRGB(0, 255, 80)
+    highlight.FillTransparency = 0.8
+    highlight.OutlineTransparency = 0
+
+    highlight.Parent = model
+
+    self.Highlights[object] = highlight
 end
 
 function ObjectFinder:Search(query)
-    query = normalize(query)
+    local root = getRoot()
 
-    if query == "" then
+    if not root then
         return {}
     end
 
-    if not self.Ready then
-        self:BuildIndex(self.Root)
+    query = normalize(query)
+
+    if query == "" then
+        self:ClearHighlights()
+        return {}
     end
 
     local results = {}
 
     for _, object in ipairs(self.Index) do
-        local name = normalize(object.Name)
+        if object.Parent and string.find(
+            normalize(object.Name),
+            query,
+            1,
+            true
+        ) then
+            local position
 
-        if string.find(name, query, 1, true) then
-            table.insert(results, object)
+            if object:IsA("Model") then
+                position = object:GetPivot().Position
+            elseif object:IsA("BasePart") then
+                position = object.Position
+            end
 
-            if #results >= self.MaxSuggestions then
-                break
+            if position then
+                local distance =
+                    (position - root.Position).Magnitude
+
+                if distance <= self.Radius then
+                    table.insert(results, {
+                        Object = object,
+                        Distance = distance,
+                    })
+                end
             end
         end
     end
 
+    table.sort(results, function(a, b)
+        return a.Distance < b.Distance
+    end)
+
+    self:ClearHighlights()
+
+    if self.Enabled then
+        for i = 1, math.min(#results, self.MaxSuggestions) do
+            self:AddHighlight(results[i].Object)
+        end
+    end
+
     return results
-end
-
-function ObjectFinder:GetPath(object)
-    if not object then
-        return "nil"
-    end
-
-    local path = object.Name
-    local parent = object.Parent
-
-    while parent and parent ~= self.Root do
-        path = parent.Name .. "." .. path
-        parent = parent.Parent
-    end
-
-    return path
-end
-
-function ObjectFinder:Refresh()
-    self:BuildIndex(self.Root)
 end
 
 function ObjectFinder:Init(Window)
@@ -81,25 +132,38 @@ function ObjectFinder:Init(Window)
         name = "Object Finder",
     })
 
+    Tab:CreateToggle({
+        name = "Object Finder",
+        default = false,
+
+        callback = function(enabled)
+            self.Enabled = enabled
+
+            if not enabled then
+                self:ClearHighlights()
+            end
+        end,
+    })
+
     Tab:CreateInput({
-        name = "Procurar objeto",
+        name = "Nome do objeto",
         placeholder = "Digite o nome...",
-        removeTextAfterFocusLost = false,
 
         callback = function(text)
             local results = self:Search(text)
 
             print(
-                "[Desgraça Eclipse] Encontrados:",
-                #results
+                "[Object Finder] "
+                .. tostring(#results)
+                .. " objetos encontrados."
             )
 
-            for i, object in ipairs(results) do
+            for i, result in ipairs(results) do
                 print(
-                    i .. ".",
-                    object.Name,
-                    "|",
-                    self:GetPath(object)
+                    i,
+                    result.Object:GetFullName(),
+                    math.floor(result.Distance),
+                    "studs"
                 )
             end
         end,
@@ -110,8 +174,23 @@ function ObjectFinder:Init(Window)
 
         callback = function()
             self:Refresh()
+            print("[Object Finder] Índice atualizado.")
         end,
     })
+
+    Tab:CreateSlider({
+        name = "Distância de busca",
+        range = {100, 5000},
+        increment = 100,
+        suffix = " studs",
+        currentValue = self.Radius,
+
+        callback = function(value)
+            self.Radius = value
+        end,
+    })
+
+    self:Refresh()
 end
 
 return ObjectFinder

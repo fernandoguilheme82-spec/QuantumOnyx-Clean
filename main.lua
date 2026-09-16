@@ -5,7 +5,8 @@
                   Direitos autorais: Lucas
 ]]
 
-local BASE = "https://raw.githubusercontent.com/fernandoguilheme82-spec/QuantumOnyx-Clean/main/"
+local BASE =
+    "https://raw.githubusercontent.com/fernandoguilheme82-spec/QuantumOnyx-Clean/main/"
 
 local Rayfield = loadstring(
     game:HttpGet("https://sirius.menu/gen2")
@@ -17,19 +18,15 @@ local Window = Rayfield:CreateWindow({
     sidebarLayout = true,
 })
 
-local Tab = Window:CreateTab({
-    name = "Principal",
-})
-
-local function LoadModule(path)
-    local url = BASE .. path
-
+local function LoadModule(file)
     local ok, result = pcall(function()
-        return loadstring(game:HttpGet(url))()
+        return loadstring(
+            game:HttpGet(BASE .. file)
+        )()
     end)
 
     if not ok then
-        warn("[Desgraça Eclipse] Erro ao carregar " .. path)
+        warn("[Desgraça Eclipse] Falha: " .. file)
         warn(result)
         return nil
     end
@@ -37,26 +34,20 @@ local function LoadModule(path)
     return result
 end
 
--- Módulo de controle de NPC
-local MobController = LoadModule("Modules/MobController.lua")
+local MobController = LoadModule(
+    "Modules/MobController.lua"
+)
 
 if MobController and MobController.Init then
     MobController:Init(Window)
 end
 
--- Módulo de teste de combate do próprio jogo
-local NPCAttackTest = LoadModule("Modules/NPCAttackTest.lua")
-
-if NPCAttackTest and NPCAttackTest.Init then
-    NPCAttackTest:Init(Window)
-end
-
-print("[Desgraça Eclipse] Sistema carregado.")
-
--- Object Finder
-local ObjectFinder = LoadModule("Modules/ObjectFinder.lua")
+local ObjectFinder = LoadModule(
+    "Modules/ObjectFinder.lua"
+)
 
 if ObjectFinder and ObjectFinder.Init then
-    ObjectFinder:BuildIndex(workspace)
     ObjectFinder:Init(Window)
 end
+
+print("[Desgraça Eclipse] Todos os módulos carregados.")
