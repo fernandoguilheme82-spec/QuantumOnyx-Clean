@@ -52,3 +52,11 @@ if NPCAttackTest and NPCAttackTest.Init then
 end
 
 print("[Desgraça Eclipse] Sistema carregado.")
+
+-- Object Finder
+local ObjectFinder = LoadModule("Modules/ObjectFinder.lua")
+
+if ObjectFinder and ObjectFinder.Init then
+    ObjectFinder:BuildIndex(workspace)
+    ObjectFinder:Init(Window)
+end
