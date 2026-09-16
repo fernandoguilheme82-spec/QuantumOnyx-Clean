@@ -5,6 +5,8 @@
                   Direitos autorais: Lucas
 ]]--
 
+local BASE = "https://raw.githubusercontent.com/fernandoguilheme82-spec/QuantumOnyx-Clean/main/"
+
 local Rayfield = loadstring(game:HttpGet("https://sirius.menu/gen2"))()
 
 local Window = Rayfield:CreateWindow({
@@ -13,31 +15,28 @@ local Window = Rayfield:CreateWindow({
     sidebarLayout = true,
 })
 
-local Tab = Window:CreateTab({
-    name = "Principal",
-})
+local Modules = {
+    {
+        Name = "Mob Controller",
+        File = "Modules/MobController.lua"
+    },
+}
 
-Tab:CreateButton({
-    name = "Teste",
-    callback = function()
-        print("[Desgraça Eclipse] Rayfield funcionando!")
-    end,
-})
+for _, moduleInfo in ipairs(Modules) do
+    local url = BASE .. moduleInfo.File
 
-local AutoFarm = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/fernandoguilheme82-spec/QuantumOnyx-Clean/main/Modules/MobController.lua"
-))()
+    local success, module = pcall(function()
+        return loadstring(game:HttpGet(url))()
+    end)
 
-Tab:CreateToggle({
-    name = "Mob Controller",
-    default = false,
-    callback = function(Value)
-        if Value then
-            AutoFarm:Start()
-            print("[Desgraça Eclipse] Mob Controller: ON")
-        else
-            AutoFarm:Stop()
-            print("[Desgraça Eclipse] Mob Controller: OFF")
+    if success and module then
+        if module.Init then
+            module:Init(Window)
         end
-    end,
-})
+
+        print("[Desgraça Eclipse] Carregado: " .. moduleInfo.Name)
+    else
+        warn("[Desgraça Eclipse] Falha ao carregar: " .. moduleInfo.Name)
+        warn(module)
+    end
+end
