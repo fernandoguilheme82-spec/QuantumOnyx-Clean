@@ -1,10 +1,8 @@
 --[[
-                            QUANTUM ONYX HUB PROJECT
-            This was made by Quantum Onyx Team ( discord.gg/quantumonyx )
-            KEYSYSTEM UI built using claude ai
-            Service by Luarmor.net
-            Compiled by: Flazhy
-            Copyright © 2022-2026 Quantum Onyx Team - All Rights Reserved.
+                            DESGRAÇA ECLIPSE
+            By Bombix Dominante / Nox
+            Apoio: Blox Brasil
+            Direitos autorais: Lucas
 ]]--
 local API_CONFIG = {
     BASE_URL = "https://api.quantumonyx.cc",
@@ -496,7 +494,7 @@ local function ShowKeyUI()
         Position = UDim2.new(0, 35, 0, 0),
         Size = UDim2.new(1, -130, 1, 0),
         Font = Enum.Font.FredokaOne,
-        Text = "Quantum Onyx — Key System",
+        Text = "Desgraça Eclipse",
         TextColor3 = Color3.fromRGB(220, 200, 255),
         TextSize = 14,
         TextXAlignment = Enum.TextXAlignment.Left,
