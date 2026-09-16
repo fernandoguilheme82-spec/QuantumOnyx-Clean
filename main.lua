@@ -31,3 +31,10 @@ for _, FileName in ipairs(Modules) do
         end
     end)
 end
+
+-- Aim NPC: módulo independente
+local AimNPC = loadstring(game:HttpGet(
+    "https://raw.githubusercontent.com/fernandoguilheme82-spec/QuantumOnyx-Clean/main/Modules/AimNPC.lua"
+))()
+
+AimNPC.Init(Window)
